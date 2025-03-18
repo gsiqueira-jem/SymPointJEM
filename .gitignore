@@ -1,0 +1,10 @@
+modules/pointops/pointops_cuda.egg-info/
+dataset
+__pycache__
+build
+dist
+*.pyc
+*.log
+work_dirs
+best.pth
+inference

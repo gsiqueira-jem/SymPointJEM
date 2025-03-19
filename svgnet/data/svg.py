@@ -129,7 +129,7 @@ class SVGDataset(Dataset):
         if self.split=="train":
             return self.transform_train(coord, feat, label)
         else:
-            return self.transform_test(coord, feat, label,lengths)
+            return (*(self.transform_test(coord, feat, label,lengths)), json_file)
             # print(f"self.split is test: {len((self.transform_test(coord, feat, label, lengths), json_file))}")
             # return (self.transform_test(coord, feat, label,lengths), json_file)
     
@@ -229,11 +229,11 @@ class SVGDataset(Dataset):
         
 
     def collate_fn(self,batch):
-        coord, feat, label,lengths = list(zip(*batch))
+        coord, feat, label,lengths, json_file = list(zip(*batch))
         offset, count = [], 0
         for item in coord:
             count += item.shape[0]
             offset.append(count)
         lengths = torch.cat(lengths) if lengths[0] is not None else None
-        return torch.cat(coord), torch.cat(feat), torch.cat(label), torch.IntTensor(offset),lengths
+        return torch.cat(coord), torch.cat(feat), torch.cat(label), torch.IntTensor(offset),lengths, json_file
   

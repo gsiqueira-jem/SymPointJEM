@@ -117,7 +117,7 @@ def process():
     # Load dataset and dataloader
     val_set = build_dataset(cfg.data.test, logger)
     dataloader = build_dataloader(
-        args, val_set, training=False, dist=False, visualise=True, **cfg.dataloader.test
+        args, val_set, training=False, dist=False,
     )
     print("Exited dataloader in visualise.py")
     
@@ -133,7 +133,7 @@ def process():
             json_file = batch[-1][0]  # Extracts JSON file name from batch
             # print(f"Length of batch: {len(batch)}")
             # print(f"batch0: {batch[0]}, {len(batch[0])}")
-            # print(f"json_file: {batch}, {json_file}")
+            #print(f"json_file: {batch}, {json_file}")
 
             # Ensure json_file is a valid path before using it
             if not isinstance(json_file, str):
@@ -143,6 +143,7 @@ def process():
                 "./dataset/test/test/svg_gt",
                 os.path.basename(json_file).replace("json", "svg"),
             )
+
             
             batch = batch[:-1]
             torch.cuda.empty_cache()
@@ -154,12 +155,12 @@ def process():
             # Processes results and saves modified SVG
             if args.out:
                 os.makedirs(args.out, exist_ok=True)
-                instances = [len(instance["masks"]) for instance in res["instances"]]
+                instances = res["instances"]
                 if len(instances) == 0:
                     continue
                 
                 # Prepares estimated contents for each element
-                num = max(instances)
+                num = max(len(instance["masks"]) for instance in instances)
                 estimated_contents = [
                     {
                         "instanceId": 0,

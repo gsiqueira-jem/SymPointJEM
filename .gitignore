@@ -11,3 +11,4 @@ work_dirs
 best.pth
 inference
 .vscode
+clean_results

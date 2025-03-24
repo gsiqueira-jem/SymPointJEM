@@ -1,5 +1,6 @@
 modules/pointops/pointops_cuda.egg-info/
 visualise_outputs
+visualise_outputs_jem
 dataset
 __pycache__
 build

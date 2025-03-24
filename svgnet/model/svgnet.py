@@ -27,7 +27,7 @@ class SVGNet(nn.Module):
         super().train(mode)
         
     def forward(self, batch,return_loss=True):
-        coords,feats,semantic_labels,offsets,lengths = batch
+        coords,feats,semantic_labels,offsets,lengths = batch[:5]
         return self._forward(coords,feats,offsets,semantic_labels,lengths,return_loss=return_loss)
      
     def prepare_targets(self,semantic_labels,bg_ind=-1,bg_sem=35):

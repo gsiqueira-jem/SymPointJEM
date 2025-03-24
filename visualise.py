@@ -56,7 +56,7 @@ def get_args():
         "--out",
         type=str,
         help="Directory for output results.",
-        default="./visualise_outputs",
+        default="./visualise_outputs_jem",
     )
     parser.add_argument("--save_lite", action="store_true", help="Save a lightweight version of the output.")
     
@@ -75,7 +75,11 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
     root = tree.getroot() # Gets the root element of the SVG
     ns = root.tag[:-3] # Extracts XML namespace from root tag
     id = 0
-    
+
+    #to_remove = []
+    #keep_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 33, 34]
+    #keep_labels = list(map(str, keep_labels))
+
     for g in root.iter(ns + "g"):  # Iterates through all <g> (group) elements in the SVG
         # Looks for path, circle and ellipse
         for _path in chain(
@@ -83,10 +87,17 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
             g.iter(ns + "circle"), 
             g.iter(ns + "ellipse")
         ):
+            try:
+                path_repre = parse_path(_path.attrib['d'])
+                _ = path_repre[0].__class__.__name__
+            except:
+                continue
+            
             # Adds semantic and instance IDs to each element
             _path.attrib["semanticId"] = str(estimated_contents[id]["semanticId"])
             _path.attrib["instanceId"] = str(estimated_contents[id]["instanceId"])
             
+                
             # Colors the element based on its semantic ID
             if estimated_contents[id]["semanticId"] == 0:
                 _path.attrib["stroke"] = "rgb(0,0,0)"  # Default to black, ID 0
@@ -94,9 +105,21 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
                 color = category2color[estimated_contents[id]["semanticId"]]
                 _path.attrib["stroke"] = f'rgb({color[0]},{color[1]},{color[2]})'
             
+    #        if not(_path.attrib["semanticId"]  in keep_labels):
+    #            to_remove.append(_path)
+            
             id += 1
-    
+
+    print("building parent map")
+    parent_map = {c:p for p in root.iter() for c in p}
+    print("parent map built")
+
+    #for elem in to_remove:
+    #     parent = parent_map[elem]
+    #    parent.remove(elem)
+        
     tree.write(os.path.join(output_folder, os.path.basename(svg_file))) # Saves the modified SVG
+    print("XML tree saved")
 
 def process():
     """Main function to perform inference on SVG files using the SVGNet model.
@@ -120,8 +143,7 @@ def process():
         args, val_set, training=False, dist=False,
     )
     print("Exited dataloader in visualise.py")
-    
-    # Sets up evaluation metrics
+        # Sets up evaluation metrics
     instance_eval = InstanceEval(
         num_classes=cfg.model.semantic_classes, ignore_label=35, gpu_num=1
     )

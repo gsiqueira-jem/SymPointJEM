@@ -23,6 +23,32 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+def parse_stroke(elem, root):
+    try:
+        return list(map(int,re.findall(r'\d+',elem.attrib['stroke'])))
+    except (ValueError, KeyError):
+        print("No stroke found in element, using root-level information")
+    
+    try:
+        return list(map(int,re.findall(r'\d+',root.attrib['stroke'])))
+    except (ValueError, KeyError):
+        print("No stroke found in root, using default #fff")
+    
+    return [0,0,0]
+
+def parse_width(elem, root):
+    try:
+        return elem.attrib['stroke-width']
+    except (ValueError, KeyError):
+        print("No stroke-width found in element, using root-level information")
+    
+    try:
+        return root.attrib['stroke-width']
+    except (ValueError, KeyError):
+        print("No stroke-width found in root, using default 0.9")
+    
+    return "0.9"
+
 def parse_svg(svg_file):
     tree = ET.parse(svg_file)
     root = tree.getroot()
@@ -40,15 +66,20 @@ def parse_svg(svg_file):
     inst_infos = defaultdict(list)
     id = 0
     for g in root.iter(ns + 'g'):
-        id +=1
         # path
+        id +=1
         for path in g.iter(ns + 'path'):
             try:
                 path_repre = parse_path(path.attrib['d'])
             except Exception as e:
                 raise RuntimeError("Parse path failed!{}, {}".format(svg_file, path.attrib['d']))
             
-            path_type = path_repre[0].__class__.__name__
+            try:
+                path_type = path_repre[0].__class__.__name__
+                assert path_type in COMMANDS
+            except (IndexError, AssertionError):
+                print(f"Strange Element {path}")
+                continue
             commands.append(COMMANDS.index(path_type))
             length = path_repre.length()
             lengths.append(length)
@@ -57,9 +88,9 @@ def parse_svg(svg_file):
             instanceId = int(path.attrib['instanceId']) if 'instanceId' in path.attrib else -1
             semanticIds.append(semanticId)
             instanceIds.append(instanceId)
-            rgb = list(map(int,re.findall(r'\d+',path.attrib['stroke'])))
+            rgb = parse_stroke(path, g)
             strokes.append(rgb)
-            widths.extend([float(path.attrib["stroke-width"])])
+            widths.extend([float(parse_width(path, g))])
             inds = [0, 1/3, 2/3, 1.0]
             arg = []
             for ind in inds:
@@ -83,9 +114,9 @@ def parse_svg(svg_file):
             instanceIds.append(instanceId)
             commands.append(COMMANDS.index("circle"))
             layerIds.append(id)
-            rgb = list(map(int,re.findall(r'\d+',circle.attrib['stroke'])))
+            rgb = parse_stroke(circle, g)
             strokes.append(rgb)
-            widths.extend([float(circle.attrib["stroke-width"])])
+            widths.extend([float(parse_width(circle, g))])
             thetas = [0,math.pi/2, math.pi, 3 * math.pi/2,]
             arg = []
             for theta in thetas:
@@ -113,9 +144,9 @@ def parse_svg(svg_file):
             semanticIds.append(semanticId)
             instanceIds.append(instanceId)
             layerIds.append(id)
-            rgb = list(map(int,re.findall(r'\d+',ellipse.attrib['stroke'])))
+            rgb = parse_stroke(ellipse, g)
             strokes.append(rgb)
-            widths.extend([float(ellipse.attrib["stroke-width"])])
+            widths.extend([float(parse_width(ellipse, g))])
             thetas = [0,math.pi/2, math.pi, 3 * math.pi/2,]
             arg = []
             for theta in thetas:
@@ -159,9 +190,7 @@ def parse_svg(svg_file):
 def save_json(json_dicts,out_json):
     json.dump(json_dicts, open(out_json, 'w'), indent=4)
     
-def process(data):
-    
-    svg_file, save_dir = data
+def process(svg_file, save_dir):
     json_dicts = parse_svg(svg_file)
     filename = svg_file.split("/")[-1].replace(".svg",".json")
     out_json = os.path.join(save_dir,filename)
@@ -176,9 +205,8 @@ if __name__=="__main__":
     os.makedirs(save_dir,exist_ok=True)
     
     inputs = []
-    for svg_path in svg_paths: inputs.append([svg_path, save_dir])
-
-    mmcv.track_parallel_progress(process,inputs,64)
+    for svg_path in svg_paths: process(svg_path, save_dir)
+#    mmcv.track_parallel_progress(process,inputs,64)
 
 
     

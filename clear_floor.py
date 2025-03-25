@@ -1,7 +1,6 @@
 import argparse
 import os
 from lxml import etree
-from svgpathtools import parse_path
 from itertools import chain
 from tqdm import tqdm
 import glob 

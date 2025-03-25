@@ -1,7 +1,8 @@
 
 import math,re
 import os,glob,json
-import xml.etree.ElementTree as ET
+# import xml.etree.ElementTree as ET
+from lxml import etree as ET
 from svgpathtools import parse_path
 from collections import defaultdict
 import numpy as np
@@ -27,12 +28,17 @@ def parse_stroke(elem, root):
     try:
         return list(map(int,re.findall(r'\d+',elem.attrib['stroke'])))
     except (ValueError, KeyError):
-        print("No stroke found in element, using root-level information")
+        pass
     
+    try:
+        return list(map(int,re.findall(r'\d+',elem.getparent().attrib['stroke'])))
+    except (ValueError, KeyError):
+        pass
+
     try:
         return list(map(int,re.findall(r'\d+',root.attrib['stroke'])))
     except (ValueError, KeyError):
-        print("No stroke found in root, using default #fff")
+        pass
     
     return [0,0,0]
 
@@ -40,12 +46,18 @@ def parse_width(elem, root):
     try:
         return elem.attrib['stroke-width']
     except (ValueError, KeyError):
-        print("No stroke-width found in element, using root-level information")
+        #print("No stroke-width found in element, using root-level information")
+        pass
     
+    try:
+        return list(map(int,re.findall(r'\d+',elem.getparent().attrib['stroke_width'])))
+    except (ValueError, KeyError):
+        pass
+
     try:
         return root.attrib['stroke-width']
     except (ValueError, KeyError):
-        print("No stroke-width found in root, using default 0.9")
+        pass
     
     return "0.9"
 
@@ -205,7 +217,10 @@ if __name__=="__main__":
     os.makedirs(save_dir,exist_ok=True)
     
     inputs = []
-    for svg_path in svg_paths: process(svg_path, save_dir)
+    for svg_path in svg_paths: 
+        print(f"Parsing {svg_path}")
+        process(svg_path, save_dir)
+        print(f"--------------------------------------------------------------------")
 #    mmcv.track_parallel_progress(process,inputs,64)
 
 

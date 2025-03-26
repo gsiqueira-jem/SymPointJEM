@@ -99,11 +99,11 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
             
                 
             # Colors the element based on its semantic ID
-            if estimated_contents[id]["semanticId"] == 0:
-                _path.attrib["stroke"] = "rgb(0,0,0)"  # Default to black, ID 0
-            else:
-                color = category2color[estimated_contents[id]["semanticId"]]
-                _path.attrib["stroke"] = f'rgb({color[0]},{color[1]},{color[2]})'
+            #if estimated_contents[id]["semanticId"] == 0:
+            #    _path.attrib["stroke"] = "rgb(0,0,0)"  # Default to black, ID 0
+            #else:
+            #    color = category2color[estimated_contents[id]["semanticId"]]
+            #    _path.attrib["stroke"] = f'rgb({color[0]},{color[1]},{color[2]})'
             
     #        if not(_path.attrib["semanticId"]  in keep_labels):
     #            to_remove.append(_path)
@@ -205,7 +205,7 @@ def process():
                     for i in np.where(instance["masks"])[0]:
                         estimated_contents[i] = {
                             "instanceId": index + 1,
-                            "semanticId": instance["labels"],
+                            "semanticId": instance["labels"] + 1,
                         }
                 
                 # Calls reconstruct_svg to save modified SVG

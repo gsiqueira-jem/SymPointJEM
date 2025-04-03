@@ -75,11 +75,7 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
     root = tree.getroot() # Gets the root element of the SVG
     ns = root.tag[:-3] # Extracts XML namespace from root tag
     id = 0
-
-    #to_remove = []
-    #keep_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 33, 34]
-    #keep_labels = list(map(str, keep_labels))
-
+    keep_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 28, 33, 34]
     for g in root.iter(ns + "g"):  # Iterates through all <g> (group) elements in the SVG
         # Looks for path, circle and ellipse
         for _path in chain(
@@ -99,14 +95,9 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
             
                 
             # Colors the element based on its semantic ID
-            #if estimated_contents[id]["semanticId"] == 0:
-            #    _path.attrib["stroke"] = "rgb(0,0,0)"  # Default to black, ID 0
-            #else:
-            #    color = category2color[estimated_contents[id]["semanticId"]]
-            #    _path.attrib["stroke"] = f'rgb({color[0]},{color[1]},{color[2]})'
+            color = category2color[estimated_contents[id]["semanticId"]]
+            _path.attrib["stroke"] = f'rgb({color[0]},{color[1]},{color[2]})' # Default to black, ID 0
             
-    #        if not(_path.attrib["semanticId"]  in keep_labels):
-    #            to_remove.append(_path)
             
             id += 1
 
@@ -114,10 +105,6 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
     parent_map = {c:p for p in root.iter() for c in p}
     print("parent map built")
 
-    #for elem in to_remove:
-    #     parent = parent_map[elem]
-    #    parent.remove(elem)
-        
     tree.write(os.path.join(output_folder, os.path.basename(svg_file))) # Saves the modified SVG
     print("XML tree saved")
 
@@ -136,6 +123,9 @@ def process():
     model = svgnet(cfg.model).cuda()
     logger.info(f"Load state dict from {args.checkpoint}")
     load_checkpoint(args.checkpoint, logger, model)
+
+    # Seed torch
+    torch.manual_seed(args.seed)
     
     # Load dataset and dataloader
     val_set = build_dataset(cfg.data.test, logger)
@@ -186,7 +176,7 @@ def process():
                 estimated_contents = [
                     {
                         "instanceId": 0,
-                        "semanticId": 0,
+                        "semanticId": 36,
                     }
                 ] * num
                 

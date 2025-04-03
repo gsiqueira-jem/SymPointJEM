@@ -29,12 +29,51 @@ def get_args():
     args = parser.parse_args()
     return args
 
+def merge_short_lists(d, threshold):
+    keys = list(d.keys())
+    new_dict = {}
+    i = 0
+
+    while i < len(keys):
+        current_key = keys[i]
+        current_list = d[current_key]
+
+        # If current list meets the threshold, add it as is
+        if len(current_list) >= threshold:
+            new_dict[current_key] = current_list
+            i += 1
+        else:
+            # Merge with next lists until threshold is met or no more lists
+            combined = current_list[:]
+            j = i + 1
+            while len(combined) < threshold and j < len(keys):
+                combined += d[keys[j]]
+                j += 1
+            new_key = f"{current_key}_to_{keys[j-1]}" if j-1 != i else current_key
+            new_dict[new_key] = combined
+            i = j  # Skip over merged lists
+
+    return new_dict
+
 def remove_annotations(svg_file, out_folder):
-    SYSTEM_PROMPT = "You are an AI assistant specialized in analyzing and organizing information from architectural floor plans." \
-                    "You will be given a sequence of text labels extracted from a CAD floor plan. Your task is to determine whether each " \
-                    "text is simply an annotation or if it represents the name of a room or building area (also referred to as an `ambient name`). " \
-                    "Your response should only include the names of rooms or areas, written exactly as they appear in the input. If none of the texts " \
-                    "in the sequence refer to ambient names, respond with: NONE."
+    SYSTEM_PROMPT =  "You're an AI CAD assistant that extract room or building ambient names from a sequence "\
+    "of text entries, separated by SEMICOLON. Building ambient names are such as: Janitors Closet, Men's Restroom" \
+    "Lobby, etc.. The AI Assistant should follow the following rules:"
+    "\n\n"
+    "- Combine tokens when they form a complete room name (e.g. 'FIRE; COMMAND; ROOM' -> 'FIRE COMMAND ROOM').\n"\
+    "- Keep the room name exactly as it appears in the original input. (e.g. 'MEN'S RSTRM' -> 'MEN'S RSTRM')\n"\
+    "- Return only the room names found in the input, in the order they appear.\n"\
+    "- If no ambient name is found the response will be 'NONE'.\n"
+    "- Your response will either be 'NONE' or the extracted sequence, nothing else, no more text"
+    "\n\n"\
+    "Example #1:\n"\
+    "User: FIRE; COMMAND; ROOM; 2CM; 2X10; GRAND LOBBY; SEE PLANS; ELEV #1\n"\
+    "Assistant: FIRE COMMAND ROOM; GRAND LOBBY; ELEV #1\n"\
+    "Example #2:\n"\
+    "User: L1-02;3'-4\";P1-08\n"\
+    "Assistant: NONE\n"\
+    
+    MODEL = "mistral-openorca"
 
     tree = etree.parse(svg_file)
     ns = {'svg': 'http://www.w3.org/2000/svg'}
@@ -51,16 +90,18 @@ def remove_annotations(svg_file, out_folder):
             group = group[0]  # Get the closest <g> ancestor
             group_id = id(group)
             text_groups[group_id].append(text_elem)
-        
-    for group_id, text_elems in text_groups.items():  
+    
+    text_groups = merge_short_lists(text_groups, 7)
+    
+    for group_id, text_elems in tqdm(text_groups.items()):  
         texts = [elem.text.strip().upper() for elem in text_elems]
-        user_prompt = ','.join(texts)
+        user_prompt = ';'.join(texts)
 
         print("Calling Builder API")
-        
+        print(f"Input: {user_prompt}")
         res = requests.post(
-        'http://localhost:11434/api/chat',json={
-            "model": "openhermes",
+        'http://10.11.0.50:11434/api/chat',json={
+            "model": MODEL,
             "messages": [
                 { 
                     "role": "system", 
@@ -75,6 +116,7 @@ def remove_annotations(svg_file, out_folder):
             "stream" : False
         })
         extracted_texts = res.json()["message"]["content"]
+        print(f"Network output: {extracted_texts}")
         extracted_texts = [ex.strip().upper() for ex in extracted_texts.split(",")]
 
         for i, og_text in enumerate(texts):

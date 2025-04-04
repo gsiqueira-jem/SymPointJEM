@@ -1,8 +1,10 @@
+from scour.scour import start as scour, parse_args as scour_args, getInOut as scour_io
+from io import BytesIO
+from lxml import etree
 import os
 import glob
 import argparse
 from tqdm import tqdm
-from lxml import etree
 from math import hypot
 
 
@@ -17,13 +19,13 @@ def get_args():
         "--input_dir",
         type=str,
         help="Directory for input",
-        default="./dataset/test/test/raw",
+        default="../dataset/test/test/raw",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
         help="Directory for output results.",
-        default="./dataset/test/test/svg_gt",
+        default="../dataset/test/test/svg_gt",
     )
     
     args = parser.parse_args()
@@ -104,7 +106,7 @@ def poly2path(tree):
 
     return tree
 
-def load_poly2path(svg_file, out_folder):
+def poly2path_indisk(svg_file, out_folder):
     tree = etree.parse(svg_file)
     tree = poly2path(tree)
     tree.write(os.path.join(out_folder, os.path.basename(svg_file)))
@@ -118,7 +120,36 @@ def process():
     print(f"{args.input_dir}")
     for file in tqdm(svg_paths):
         print(f"File {file}")
-        load_poly2path(file, args.output_dir)
+        poly2path_indisk(file, args.output_dir)
+
+def get_scour_params():
+    options = scour_args()
+    
+    options.enable_id_stripping = True
+    options.shorten_ids = True        
+    options.remove_metadata = True    
+    options.strip_xml_prolog = True   
+    options.strip_xml_space = True   
+
+    return options
+
+def optimize_svg(input_file, output_file):
+    options = get_scour_params()
+
+    options.infilename = input_file
+    options.outfilename = output_file
+    
+    (input_svg, output_svg) = scour_io(options)
+    scour(options, input_svg, output_svg)
+
+def load_optimized_svg(input_file):
+    BASE_DIR = "/tmp"
+    basename = os.path.basename(input_file)
+    output_file = os.path.join(BASE_DIR, basename)
+    optimize_svg(input_file, output_file)
+
+    tree = etree.parse(output_file)
+    return poly2path(tree)
 
 
 def main():

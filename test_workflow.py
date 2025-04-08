@@ -3,7 +3,7 @@ import json
 from services.svg_loader import load_optimized_svg
 from services.annotation_cleaner import remove_annotations
 from services.json_parser import parse_svg
-
+from services.svg_serializer import process
 def cad_workflow(svg_file):
     basename = os.path.basename(test_file)
     json_basename = basename.replace(".svg",".json")
@@ -28,9 +28,10 @@ def cad_workflow(svg_file):
     no_annotations_tree.write(tree_file)
     json.dump(json_repr, open(json_file, 'w'), indent=4)
 
+    #process(json_path, dataset_path, output_path)
 
-    output_file = os.path.join (output_path, basename)
-    return output_file
+    #output_file = os.path.join(output_path, basename)
+    return tree_file
 
 def main(test_file):
     cad_workflow(test_file)

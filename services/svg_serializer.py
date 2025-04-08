@@ -105,21 +105,28 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
     parent_map = {c:p for p in root.iter() for c in p}
     print("parent map built")
 
-    tree.write(os.path.join(output_folder, os.path.basename(svg_file))) # Saves the modified SVG
+    result_file = os.path.join(output_folder, os.path.basename(svg_file))
+    tree.write(result_file) # Saves the modified SVG
     print("XML tree saved")
 
-def process(args=None):
+def process(json_path=None, svg_path="./dataset/test/test/svg_gt", result_path=None):
     """Main function to perform inference on SVG files using the SVGNet model.
     
     Loads the model, processes test data, and generates modified SVG outputs with semantic and instance IDs.
     """
     # Gets command line arguments and read configuration file
-    if not args:
-        args = get_args()
+    
+    args = get_args()
     cfg_txt = open(args.config, "r").read()
     cfg = Munch.fromDict(yaml.safe_load(cfg_txt))
     logger = get_root_logger()
     
+    # Change input and output parameters TODO: extract this bit to a different configuration
+    if json_path:
+        cfg.data.test.data_root = json_path
+    if result_path:
+        args.out = result_path
+
     # Load model
     model = svgnet(cfg.model).cuda()
     logger.info(f"Load state dict from {args.checkpoint}")
@@ -153,7 +160,7 @@ def process(args=None):
                 raise TypeError(f"Expected json_file to be a string, but got {type(json_file)}: {json_file}")
             
             svg_file = os.path.join(
-                "./dataset/test/test/svg_gt",
+                svg_path,
                 os.path.basename(json_file).replace("json", "svg"),
             )
 
@@ -201,6 +208,11 @@ def process(args=None):
                 
                 # Calls reconstruct_svg to save modified SVG
                 reconstruct_svg(svg_file, estimated_contents, args.out)
+
+def online_process(in_path, out_path):
+    args = get_args()
+    args.ou
+
 
 if __name__ == "__main__":
     process()

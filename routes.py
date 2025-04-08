@@ -1,18 +1,44 @@
-from fastapi import APIRouter, File, UploadFile
+import os
+from fastapi import APIRouter, File, UploadFile, Form
+from threading import Thread
+from uuid import uuid4
+from test_workflow import cad_workflow
 #from services.svg_loader import load_svg
 #from services.svg_transformer import transform_svg
 #from services.svg_writer import serialize_svg
 
 router = APIRouter()
+task_status = {}
+
+async def process_cad(task_id, file, filename):
+    task_status[task_id] = {"status" : "running", "result_path" : None}
+    FILE_LOC = f"/tmp/{task_id}"
+
+    os.makedirs(FILE_LOC, exist_ok=True)
+    file_path = os.path.join(FILE_LOC, filename)
+    
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    
+    output_file = cad_workflow(file_path)
+    
+    task_status[task_id]["status"] = "done"
+    task_status[task_id]["file_path"] = output_file
 
 @router.post("/process-svg/")
-async def process_svg(file: UploadFile = File(...)):
-    contents = await file.read()
-#    
-#    root = load_svg(contents)
-#    transformed = transform_svg(root)
-#    modified_svg = serialize_svg(transformed)
+async def process_svg(file: UploadFile = File(...), filename: str = Form(...)):
+    task_id = str(uuid4())
+    
+    thread = Thread(target=process_cad,args=(task_id, file, filename))
+    thread.start()
+    
+    return { "task_id": task_id }
 
-#    return {"modified_svg": modified_svg}
-
-    pass
+@router.get("/task-status/{task_id}")
+def get_status(task_id: str):
+    status = task_status.get(task_id)
+    if status is None:
+        return {"status": "not_found"}
+    
+    return status

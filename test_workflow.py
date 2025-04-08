@@ -4,9 +4,7 @@ from services.svg_loader import load_optimized_svg
 from services.annotation_cleaner import remove_annotations
 from services.json_parser import parse_svg
 
-
-
-def main(test_file):
+def cad_workflow(svg_file):
     basename = os.path.basename(test_file)
     json_basename = basename.replace(".svg",".json")
     project_name =  os.path.splitext(basename)[0]
@@ -19,7 +17,7 @@ def main(test_file):
     os.makedirs(json_path,exist_ok=True)
     os.makedirs(output_path,exist_ok=True)
 
-    optimized_tree = load_optimized_svg(test_file)
+    optimized_tree = load_optimized_svg(svg_file)
     no_annotations_tree = remove_annotations(optimized_tree)
     json_repr = parse_svg(no_annotations_tree)
 
@@ -29,6 +27,13 @@ def main(test_file):
 
     no_annotations_tree.write(tree_file)
     json.dump(json_repr, open(json_file, 'w'), indent=4)
+
+
+    output_file = os.path.join (output_path, basename)
+    return output_file
+
+def main(test_file):
+    cad_workflow(test_file)
 
 
 if __name__ == "__main__":

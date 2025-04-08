@@ -26,7 +26,11 @@ async def process_cad(task_id, file, filename):
     task_status[task_id]["status"] = "done"
     task_status[task_id]["file_path"] = output_file
 
-@router.post("/process-svg/")
+@router.get("/cad-cleaner")
+def cad_ok():
+    return {"message" : "CadCleaner is running on port 8000"}
+
+@router.post("/cad-cleaner/process-svg/")
 async def process_svg(file: UploadFile = File(...), filename: str = Form(...)):
     task_id = str(uuid4())
     
@@ -35,7 +39,7 @@ async def process_svg(file: UploadFile = File(...), filename: str = Form(...)):
     
     return { "task_id": task_id }
 
-@router.get("/task-status/{task_id}")
+@router.get("/cad-cleaner/task-status/{task_id}")
 def get_status(task_id: str):
     status = task_status.get(task_id)
     if status is None:

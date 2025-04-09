@@ -75,7 +75,6 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
     root = tree.getroot() # Gets the root element of the SVG
     ns = root.tag[:-3] # Extracts XML namespace from root tag
     id = 0
-    keep_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 28, 33, 34]
     for g in root.iter(ns + "g"):  # Iterates through all <g> (group) elements in the SVG
         # Looks for path, circle and ellipse
         for _path in chain(
@@ -90,20 +89,19 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
                 continue
             
             # Adds semantic and instance IDs to each element
-            _path.attrib["semanticId"] = str(estimated_contents[id]["semanticId"])
-            _path.attrib["instanceId"] = str(estimated_contents[id]["instanceId"])
-            
+            if id < len(estimated_contents):
+                _path.attrib["semanticId"] = str(estimated_contents[id]["semanticId"])
+                _path.attrib["instanceId"] = str(estimated_contents[id]["instanceId"])
+                color = category2color[estimated_contents[id]["semanticId"]]
+                _path.attrib["stroke"] = f'rgb({color[0]},{color[1]},{color[2]})' # Default to black, ID 0
+
+            else:
+                _path.attrib["semanticId"] = 35
+                _path.attrib["instanceId"] = -1
                 
             # Colors the element based on its semantic ID
-            color = category2color[estimated_contents[id]["semanticId"]]
-            _path.attrib["stroke"] = f'rgb({color[0]},{color[1]},{color[2]})' # Default to black, ID 0
-            
-            
-            id += 1
 
-    print("building parent map")
-    parent_map = {c:p for p in root.iter() for c in p}
-    print("parent map built")
+            id += 1
 
     result_file = os.path.join(output_folder, os.path.basename(svg_file))
     tree.write(result_file) # Saves the modified SVG

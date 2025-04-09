@@ -55,75 +55,62 @@ def merge_short_lists(d, threshold):
 
     return new_dict
 
-def remove_annotations(tree):
-    SYSTEM_PROMPT =  "You're an AI CAD assistant that extract room or building ambient names from a sequence "\
-    "of text entries, separated by SEMICOLON. Building ambient names are such as: Janitors Closet, Men's Restroom" \
-    "Lobby, etc.. The AI Assistant should follow the following rules:"
-    "\n\n"
-    "- Combine tokens when they form a complete room name (e.g. 'FIRE; COMMAND; ROOM' -> 'FIRE COMMAND ROOM').\n"\
-    "- Keep the room name exactly as it appears in the original input. (e.g. 'MEN'S RSTRM' -> 'MEN'S RSTRM')\n"\
-    "- Return only the room names found in the input, in the order they appear.\n"\
-    "- If no ambient name is found the response will be 'NONE'.\n"
-    "- Your response will either be 'NONE' or the extracted sequence, nothing else, no more text"
-    "\n\n"\
-    "Example #1:\n"\
-    "User: FIRE; COMMAND; ROOM; 2CM; 2X10; GRAND LOBBY; SEE PLANS; ELEV #1\n"\
-    "Assistant: FIRE COMMAND ROOM; GRAND LOBBY; ELEV #1\n"\
-    "Example #2:\n"\
-    "User: L1-02;3'-4\";P1-08\n"\
-    "Assistant: NONE\n"\
+def remove_annotations(tree, logger):
+    SYSTEM_PROMPT =  "You're an AI floor plan assistant that receives texts present in a CAD blueprint and determine if they're the name of a room/ambient in a building or not. Room/Ambient name examples " \
+                     "are rooms, restrooms, elevators, etc. Your answer will ONLY be 'YES' for rooms/ambients or 'NO' for the rest"
     
     MODEL = "mistral-openorca"
 
     ns = {'svg': 'http://www.w3.org/2000/svg'}
 
-    text_groups = defaultdict(list)
+    text_paths = tree.xpath('//svg:text', namespaces=ns)
+    text_elements = []
+    for elem in text_paths:
+        if elem.text:
+            text_elements.append(elem)
+        else:
+            tspans = [tspan for tspan in elem.xpath('.//svg:tspan', namespaces=ns) if tspan.text]
+            text_elements.extend(tspans)
 
-    text_elements = tree.xpath('//svg:text', namespaces=ns)
-    for text_elem in text_elements:
-        # Find the closest <g> ancestor (parent) of the <text> element
-        group = text_elem.xpath('ancestor::svg:g[1]', namespaces={'svg': 'http://www.w3.org/2000/svg'})
-    
-        # If a <g> group is found, use its 'id' attribute to group the <text> elements
-        if group:
-            group = group[0]  # Get the closest <g> ancestor
-            group_id = id(group)
-            text_groups[group_id].append(text_elem)
-    
-    text_groups = merge_short_lists(text_groups, 7)
-    
-    for group_id, text_elems in tqdm(text_groups.items()):  
-        texts = [elem.text.strip().upper() for elem in text_elems]
-        user_prompt = ';'.join(texts)
+    to_remove = []
+    for elem in text_elements:
+        if elem.text:
+            try:
+                user_prompt = elem.text.upper()
+            except:
+                elem = [tspan for tspan in elem.xpath('.//svg:tspan', namespaces=ns) if tspan.text]
+                user_prompt = elem.text
+            logger.info(f"Processing text {user_prompt}") 
+            logger.info("Calling Builder API")
+            
+            res = requests.post(
+            'http://10.11.0.50:11434/api/chat',json={
+                "model": MODEL,
+                "messages": [
+                    { 
+                        "role": "system", 
+                        "content": SYSTEM_PROMPT
+                    },
 
-        print("Calling Builder API")
-        print(f"Input: {user_prompt}")
-        res = requests.post(
-        'http://10.11.0.50:11434/api/chat',json={
-            "model": MODEL,
-            "messages": [
-                { 
-                    "role": "system", 
-                    "content": SYSTEM_PROMPT
-                },
-
-                { 
-                    "role": "user", 
-                    "content": user_prompt
-                }
-            ],
-            "stream" : False
-        })
-        extracted_texts = res.json()["message"]["content"]
-        print(f"Network output: {extracted_texts}")
-        extracted_texts = [ex.strip().upper() for ex in extracted_texts.split(",")]
-
-        for i, og_text in enumerate(texts):
-            if og_text not in extracted_texts:
-                if not any([og_text in ext for ext in extracted_texts]):
-                    parent = text_elems[i].getparent()
-                    parent.remove(text_elems[i])
+                    { 
+                        "role": "user", 
+                        "content": user_prompt
+                    }
+                ],
+                "stream" : False
+            })
+            logger.info("API Called successfully")
+            is_room = res.json()["message"]["content"].strip().upper()
+            logger.info(f"AI AUTOMATED: Is room? {is_room}")
+            if is_room == "NO":
+                to_remove.append(elem)
+                logger.info(f"Element Removed")
     
+
+    for elem in to_remove:
+        parent = elem.getparent()
+        if parent:
+            parent.remove(elem)
     return tree
 
 def load_remove_annotations(svg_file, out_folder):

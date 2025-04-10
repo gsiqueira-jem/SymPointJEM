@@ -1,8 +1,10 @@
+from scour.scour import start as scour, parse_args as scour_args, getInOut as scour_io
+from io import BytesIO
+from lxml import etree
 import os
 import glob
 import argparse
 from tqdm import tqdm
-from lxml import etree
 from math import hypot
 
 
@@ -17,13 +19,13 @@ def get_args():
         "--input_dir",
         type=str,
         help="Directory for input",
-        default="./dataset/test/test/raw",
+        default="../dataset/test/test/raw",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
         help="Directory for output results.",
-        default="./dataset/test/test/svg_gt",
+        default="../dataset/test/test/svg_gt",
     )
     
     args = parser.parse_args()
@@ -104,7 +106,7 @@ def poly2path(tree):
 
     return tree
 
-def load_poly2path(svg_file, out_folder):
+def poly2path_indisk(svg_file, out_folder):
     tree = etree.parse(svg_file)
     tree = poly2path(tree)
     tree.write(os.path.join(out_folder, os.path.basename(svg_file)))
@@ -118,7 +120,49 @@ def process():
     print(f"{args.input_dir}")
     for file in tqdm(svg_paths):
         print(f"File {file}")
-        load_poly2path(file, args.output_dir)
+        poly2path_indisk(file, args.output_dir)
+
+def get_scour_params(logger):
+    logger.info(f"Creating scout args")
+    options = scour_args()
+    
+    options.enable_id_stripping = True
+    options.shorten_ids = True        
+    options.remove_metadata = True    
+    options.strip_xml_prolog = True   
+    options.strip_xml_space = True   
+
+    return options
+
+def optimize_svg(input_file, output_file, logger):
+    logger.info(f"Setting up scour params")
+    options = get_scour_params(logger)
+    
+    options.infilename = input_file
+    options.outfilename = output_file
+    
+    logger.info(f"Setting scour_io in: {input_file} out: {output_file} ")
+    (input_svg, output_svg) = scour_io(options)
+    logger.info(f"Optimizing {input_svg} and saving it at {output_file}")
+    scour(options, input_svg, output_svg)
+    logger.info(f"Optimization was completed successfully")
+
+def load_optimized_svg(input_file, task_dir, logger):
+    basename = os.path.basename(input_file)
+    output_file = os.path.join(task_dir, "scour", basename)
+    
+    # logger.info(f"Optimizing {input_file} with scour")
+    # optimize_svg(input_file, output_file, logger)
+    # logger.info(f"Optimized file saved into {output_file}")
+    
+    logger.info(f"Parsing optimized File")
+    tree = etree.parse(input_file)
+    
+    logger.info(f"Breaking polylines and polygons")
+    path_tree = poly2path(tree)
+    logger.info(f"Breaking polylines and polygons finished")
+    
+    return path_tree
 
 
 def main():

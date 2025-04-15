@@ -50,7 +50,7 @@ def main(test_file, test_dir, logger):
 
 
 if __name__ == "__main__":
-    test_file = "./dataset/test/test/raw/1-Crosby_Original_Model.svg"
+    test_file = "./dataset/test/test/raw/1-Crosby_Original_otimizado.svg"
     test_dir = "/tmp/test"
     os.makedirs(test_dir+"/scour",exist_ok=True)
 

@@ -147,16 +147,19 @@ def optimize_svg(input_file, output_file, logger):
     scour(options, input_svg, output_svg)
     logger.info(f"Optimization was completed successfully")
 
-def load_optimized_svg(input_file, task_dir, logger):
+def load_optimized_svg(input_file, task_dir, logger, scour=False):
     basename = os.path.basename(input_file)
-    output_file = os.path.join(task_dir, "scour", basename)
     
-    # logger.info(f"Optimizing {input_file} with scour")
-    # optimize_svg(input_file, output_file, logger)
-    # logger.info(f"Optimized file saved into {output_file}")
-    
+    if scour:
+        logger.info(f"Optimizing {input_file} with scour")
+        load_file = os.path.join(task_dir, "scour", basename)
+        optimize_svg(input_file, load_file, logger)
+        logger.info(f"Optimized file saved into {load_file}")
+    else:
+        load_file = input_file
+
     logger.info(f"Parsing optimized File")
-    tree = etree.parse(input_file)
+    tree = etree.parse(load_file)
     
     logger.info(f"Breaking polylines and polygons")
     path_tree = poly2path(tree)

@@ -1,10 +1,12 @@
 import os
 import sys
+import json
 import logging
 from services.svg_loader import load_optimized_svg
 from services.annotation_cleaner import remove_annotations
 from services.json_parser import parse_svg
 from services.svg_serializer import process
+from services.remove_segments import clear_xml
 
 def cad_workflow(svg_file, task_dir, logger):
     basename = os.path.basename(svg_file)
@@ -12,16 +14,19 @@ def cad_workflow(svg_file, task_dir, logger):
     project_name =  os.path.splitext(basename)[0]
     
     logger.info("Creating output dirs for task")
-    dataset_path=f"/mnt/c/Dataset/{project_name}/svg"
+    dataset_path=f"/mnt/c/Dataset/{project_name}/clear_annotations"
     json_path=f"/mnt/c/Dataset/{project_name}/json"
-    output_path=f"/mnt/c/Dataset/{project_name}/result"
+    reconstructed_path=f"/mnt/c/Dataset/{project_name}/reconstructed"
+    output_path=f"/mnt/c/Dataset/{project_name}/final"
+
 
     os.makedirs(dataset_path,exist_ok=True)
     os.makedirs(json_path,exist_ok=True)
+    os.makedirs(reconstructed_path,exist_ok=True)
     os.makedirs(output_path,exist_ok=True)
-    
+
     logger.info("Optimizing SVG and Breaking Polylines")
-    optimized_tree = load_optimized_svg(svg_file, task_dir, logger)
+    optimized_tree = load_optimized_svg(svg_file, task_dir, logger, scour=True)
     logger.info("SVG Optimized and polylines broken into paths")
 
 
@@ -30,18 +35,20 @@ def cad_workflow(svg_file, task_dir, logger):
     logger.info("Annotations removed")
 
     # logger.info("Creating json representation")
-    # json_repr = parse_svg(no_annotations_tree)
+    json_repr = parse_svg(no_annotations_tree)
 
 
     tree_file = os.path.join(dataset_path, basename)
-    # json_file = os.path.join(json_path, json_basename)
+    json_file = os.path.join(json_path, json_basename)
 
     no_annotations_tree.write(tree_file)
-    # json.dump(json_repr, open(json_file, 'w'), indent=4)
+    json.dump(json_repr, open(json_file, 'w'), indent=4)
 
-    # process(json_path, dataset_path, output_path)
-
-    # output_file = os.path.join(output_path, basename)
+    process(json_path, dataset_path, reconstructed_path)
+    
+    reconstructed_file = os.path.join(reconstructed_path, basename)
+    clear_xml(reconstructed_file, output_path)
+    
     return tree_file
 
 

@@ -96,8 +96,8 @@ def reconstruct_svg(svg_file, estimated_contents, output_folder):
                 _path.attrib["stroke"] = f'rgb({color[0]},{color[1]},{color[2]})' # Default to black, ID 0
 
             else:
-                _path.attrib["semanticId"] = 35
-                _path.attrib["instanceId"] = -1
+                _path.attrib["semanticId"] = "35"
+                _path.attrib["instanceId"] = "-1"
                 
             # Colors the element based on its semantic ID
 

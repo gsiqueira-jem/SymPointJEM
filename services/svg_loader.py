@@ -6,7 +6,7 @@ import glob
 import argparse
 from tqdm import tqdm
 from math import hypot
-
+import re
 
 def get_args():
     """Parses command-line arguments for the SVGNet inference script.
@@ -53,19 +53,30 @@ def points_to_path(points_str, closed=False):
         d += " Z"
     return d
 
-def is_trivial_path(d_attr, tolerance=0.0):
-    try:
-        tokens = d_attr.strip().split()
-        if len(tokens) != 6 or tokens[0] != 'M' or tokens[3] != 'L':
+def is_trivial_path(d_attr):
+    if not d_attr:
+        return True
+
+    tokens = re.findall(r'[a-zA-Z]|-?\d*\.?\d+', d_attr)
+
+
+    # Case 1: Just a move command — useless
+    if len(tokens) == 3 and tokens[0].upper() == 'M':
+        return True
+
+    # Case 2: Move followed by a line to same point
+    if len(tokens) == 6 and tokens[0].upper() == 'M' and tokens[3].upper() == 'L':
+        try:
+            x1, y1 = float(tokens[1]), float(tokens[2])
+            x2, y2 = float(tokens[4]), float(tokens[5])
+            return x1 == x2 and y1 == y2
+        except ValueError:
             return False
-        x1, y1 = float(tokens[1]), float(tokens[2])
-        x2, y2 = float(tokens[4]), float(tokens[5])
-        return hypot(x2 - x1, y2 - y1) <= tolerance
-    except:
-        return False
+
+    return False
 
 
-def poly2path(tree):
+def poly2path(tree, logger):
     root = tree.getroot()
     ns = {'svg': 'http://www.w3.org/2000/svg'}
     no_info = 0
@@ -101,9 +112,23 @@ def poly2path(tree):
             parent = elem.getparent()
             parent.replace(elem, new_elem)
     
-    print(f"{no_info} polylines/polygons skipped because of no info")
-    print(f"{trivial} polylines/polygons skipped because of being 0 length")
+    logger.info(f"{no_info} polylines/polygons skipped because of no info")
+    logger.info(f"{trivial} polylines/polygons skipped because of being 0 length")
 
+    return tree
+
+def remove_trivial_paths(tree, logger):
+    ns = {'svg': 'http://www.w3.org/2000/svg'}
+    paths = tree.xpath(f'//svg:path', namespaces=ns)
+
+    removed = 0
+    for path in paths:
+        d = path.get("d")
+        if is_trivial_path(d):
+            path.getparent().remove(path)
+            removed +=1
+    
+    logger.info(f"Removed {removed} paths for being size 0")
     return tree
 
 def poly2path_indisk(svg_file, out_folder):
@@ -162,9 +187,12 @@ def load_optimized_svg(input_file, task_dir, logger, scour=False):
     tree = etree.parse(load_file)
     
     logger.info(f"Breaking polylines and polygons")
-    path_tree = poly2path(tree)
+    path_tree = poly2path(tree, logger)
     logger.info(f"Breaking polylines and polygons finished")
-    
+
+    logger.info(f"Removing useless (zero lenght) paths")
+    path_tree = remove_trivial_paths(path_tree, logger)
+
     return path_tree
 
 

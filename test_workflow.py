@@ -8,7 +8,7 @@ from services.json_parser import parse_svg
 from services.svg_serializer import process
 from services.remove_segments import clear_xml
 
-def cad_workflow(svg_file, task_dir, logger):
+def cad_workflow(svg_file, task_dir, logger, scour=False):
     basename = os.path.basename(svg_file)
     json_basename = basename.replace(".svg",".json")
     project_name =  os.path.splitext(basename)[0]
@@ -26,7 +26,7 @@ def cad_workflow(svg_file, task_dir, logger):
     os.makedirs(output_path,exist_ok=True)
 
     logger.info("Optimizing SVG and Breaking Polylines")
-    optimized_tree = load_optimized_svg(svg_file, task_dir, logger, scour=True)
+    optimized_tree = load_optimized_svg(svg_file, task_dir, logger, scour=scour)
     logger.info("SVG Optimized and polylines broken into paths")
 
 
@@ -57,7 +57,7 @@ def main(test_file, test_dir, logger):
 
 
 if __name__ == "__main__":
-    test_file = "./dataset/test/test/raw/1-Crosby_Original_otimizado.svg"
+    test_file = "./dataset/test/test/raw/aspose_no_scour.svg"
     test_dir = "/tmp/test"
     os.makedirs(test_dir+"/scour",exist_ok=True)
 

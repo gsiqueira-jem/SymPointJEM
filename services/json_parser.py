@@ -64,7 +64,14 @@ def parse_width(elem, root):
 def parse_svg(tree):
     root = tree.getroot()
     ns = root.tag[:-3]
-    minx, miny, width, height = [int(float(x)) for x in root.attrib['viewBox'].split(' ')]
+    if root.attrib.get("viewBox"):
+        minx, miny, width, height = [int(float(x)) for x in root.attrib['viewBox'].split(' ')]
+    elif root.attrib.get("width") and root.attrib.get("height"):
+        width  =  int(float(root.attrib["width"]))
+        height  =  int(float(root.attrib["height"]))
+    else:
+        raise Exception("Width & Height not specified in the document header")
+        
     
     commands = []
     args = [] # (x1,y1,x2,y2,x3,y3,x4,y4) 4points

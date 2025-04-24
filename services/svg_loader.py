@@ -53,11 +53,51 @@ def points_to_path(points_str, closed=False):
         d += " Z"
     return d
 
+import re
+
+def collapse_dattr(d_attr):
+    if not d_attr:
+        return ''
+
+    tokens = re.findall(r'[a-zA-Z]|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?', d_attr)
+    cleaned_tokens = []
+    i = 0
+    prev_point = None
+
+    while i < len(tokens):
+        cmd = tokens[i]
+        cmd = cmd.upper()
+
+        if cmd == 'M' or cmd == 'L':
+            try:
+                x = float(tokens[i + 1])
+                y = float(tokens[i + 2])
+                current_point = (x, y)
+
+                if cmd == 'M':
+                    cleaned_tokens.extend(['M', str(x), str(y)])
+                    prev_point = current_point
+                elif cmd == 'L':
+                    if current_point != prev_point:
+                        cleaned_tokens.extend(['L', str(x), str(y)])
+                        prev_point = current_point
+
+                i += 3
+            except (IndexError, ValueError):
+                break
+        else:
+            # For unhandled commands, just pass them through
+            cleaned_tokens.append(tokens[i])
+            i += 1
+
+    return ' '.join(cleaned_tokens)
+
+
 def is_trivial_path(d_attr):
     if not d_attr:
         return True
 
-    tokens = re.findall(r'[a-zA-Z]|-?\d*\.?\d+', d_attr)
+    tokens = re.findall(r'[a-zA-Z]|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?', d_attr)
 
 
     # Case 1: Just a move command — useless
@@ -124,10 +164,12 @@ def remove_trivial_paths(tree, logger):
     removed = 0
     for path in paths:
         d = path.get("d")
-        if is_trivial_path(d):
+        new_d = collapse_dattr(d)
+        if new_d:
+            path.set("d", new_d)
+        else:
             path.getparent().remove(path)
             removed +=1
-    
     logger.info(f"Removed {removed} paths for being size 0")
     return tree
 

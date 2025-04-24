@@ -57,7 +57,7 @@ def main(test_file, test_dir, logger):
 
 
 if __name__ == "__main__":
-    test_file = "./dataset/test/test/raw/aspose_no_scour.svg"
+    test_file = "./dataset/test/test/raw/ndwg_no_scour.svg"
     test_dir = "/tmp/test"
     os.makedirs(test_dir+"/scour",exist_ok=True)
 

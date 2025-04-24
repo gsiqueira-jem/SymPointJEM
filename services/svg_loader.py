@@ -58,7 +58,8 @@ import re
 def collapse_dattr(d_attr):
     if not d_attr:
         return ''
-
+    
+    d_attr = d_attr.replace(',', ' ')
     tokens = re.findall(r'[a-zA-Z]|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?', d_attr)
     cleaned_tokens = []
     i = 0
@@ -84,7 +85,34 @@ def collapse_dattr(d_attr):
 
                 i += 3
             except (IndexError, ValueError):
+                break  
+              
+        elif cmd == 'A':
+            try:
+                rx = float(tokens[i + 1])
+                ry = float(tokens[i + 2])
+                x_axis_rotation = tokens[i + 3]
+                large_arc_flag = tokens[i + 4]
+                sweep_flag = tokens[i + 5]
+                x = float(tokens[i + 6])
+                y = float(tokens[i + 7])
+                current_point = (x, y)
+
+                if prev_point != current_point:
+                    cleaned_tokens.extend([
+                        'A',
+                        str(rx), str(ry),
+                        x_axis_rotation,
+                        large_arc_flag,
+                        sweep_flag,
+                        str(x), str(y)
+                    ])
+                    prev_point = current_point
+
+                i += 8
+            except (IndexError, ValueError):
                 break
+
         else:
             # For unhandled commands, just pass them through
             cleaned_tokens.append(tokens[i])

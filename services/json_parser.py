@@ -103,7 +103,10 @@ def parse_svg(tree):
             lengths.append(length)
             layerIds.append(id)
             semanticId = int(path.attrib['semanticId']) - 1 if 'semanticId' in path.attrib else LABEL_NUM
-            instanceId = int(path.attrib['instanceId']) if 'instanceId' in path.attrib else -1
+            
+            instanceId = int(path.attrib['instanceId']) if 'instanceId' in path.attrib else (
+                         path.attrib['id'] if 'id' in path.attrib else -1)
+            
             semanticIds.append(semanticId)
             instanceIds.append(instanceId)
             rgb = parse_stroke(path, g)

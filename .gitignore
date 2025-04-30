@@ -12,3 +12,4 @@ best.pth
 inference
 .vscode
 clean_results
+clean_annotations

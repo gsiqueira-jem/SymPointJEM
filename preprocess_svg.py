@@ -62,8 +62,8 @@ def is_trivial_path(d_attr, tolerance=0.0):
     except:
         return False
 
-def poly2path(svg_file, out_folder):
-    tree = etree.parse(svg_file)
+
+def poly2path(tree):
     root = tree.getroot()
     ns = {'svg': 'http://www.w3.org/2000/svg'}
     no_info = 0
@@ -101,9 +101,13 @@ def poly2path(svg_file, out_folder):
     
     print(f"{no_info} polylines/polygons skipped because of no info")
     print(f"{trivial} polylines/polygons skipped because of being 0 length")
+
+    return tree
+
+def load_poly2path(svg_file, out_folder):
+    tree = etree.parse(svg_file)
+    tree = poly2path(tree)
     tree.write(os.path.join(out_folder, os.path.basename(svg_file)))
-
-
 
 def process():
     args = get_args()
@@ -114,7 +118,7 @@ def process():
     print(f"{args.input_dir}")
     for file in tqdm(svg_paths):
         print(f"File {file}")
-        poly2path(file, args.output_dir)
+        load_poly2path(file, args.output_dir)
 
 
 def main():
